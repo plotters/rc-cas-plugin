@@ -1,0 +1,4 @@
+#summary Requirements for the CAS Authentication plugin.
+
+= Libraries =
+phpCAS [http://www.ja-sig.org/wiki/display/CASC/phpCAS]
