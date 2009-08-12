@@ -2,8 +2,8 @@
 /**
  * CAS Authentication
  *
- * This plugin replaces the Roundcube login page with authentication requests
- * to a CAS server, which enables logging into Roundcube with identities
+ * This plugin replaces the RoundCube login page with authentication requests
+ * to a CAS server, which enables logging into RoundCube with identities
  * authenticated by the CAS server and acts as a CAS proxy to relay authenticated
  * credentials to the IMAP backend.
  *
@@ -107,9 +107,9 @@ class cas_authentication extends rcube_plugin {
 
         // intercept logout task
         else if ($args['task'] == 'logout') {
-            // still logged into Roundcube
+            // still logged into RoundCube
             if (isset($_SESSION['user_id'])) {
-                // perform Roundcube logout routines
+                // perform RoundCube logout routines
                 $rcmail->logout_actions();
                 $rcmail->kill_session();
             }
@@ -172,7 +172,7 @@ class cas_authentication extends rcube_plugin {
             // retrieve configurations
             $cfg = $rcmail->config->all();
 
-            // Roundcube is acting as CAS proxy
+            // RoundCube is acting as CAS proxy
             if ($cfg['cas_proxy']) {
                 // the IMAP server caches proxy tickets
                 if ($cfg['cas_imap_caching']) {
@@ -244,7 +244,7 @@ class cas_authentication extends rcube_plugin {
      *
      */
     private function imap_failure() {
-        // retrieve roundcube instance
+        // retrieve rcmail instance
         $rcmail = rcmail::get_instance();
         
         // compose error page content
@@ -278,7 +278,7 @@ EOF;
     }
     
     /**
-     * Build full URLs to this instance of Roundcube for use with CAS servers
+     * Build full URLs to this instance of RoundCube for use with CAS servers
      * 
      * @param array $params url parameters as key-value pairs
      * @return string full Roundcube URL
