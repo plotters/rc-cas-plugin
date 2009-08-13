@@ -1,4 +1,4 @@
-#summary Guide for Installing and Configuring the CAS Authentication plugin
+#summary Guide for installing and configuring the CAS Authentication plugin
 
 = Installation =
 See [http://trac.roundcube.net/wiki/Doc_Plugins#InstallingandactivatingPlugins] for instructions on installing !RoundCube plugins.
