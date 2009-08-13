@@ -1,3 +1,0 @@
-#summary imap_connect hook
-
-The CAS Authentication plugin needs the imap_connect hook enabled in RoundCube to work. This hook has been added to RoundCube but the way the hook is currently implemented is different from the way I added the hook when I wrote the plugin. See [http://trac.roundcube.net/ticket/1485956 this ticket] for details.
