@@ -1,9 +1,9 @@
 #summary Requirements for the CAS Authentication plugin.
 
 == Libraries ==
-* phpCAS 1.0.1+: visit [http://www.ja-sig.org/wiki/display/CASC/phpCAS] for details and installation instructions.
+  * phpCAS 1.0.1+: visit [http://www.ja-sig.org/wiki/display/CASC/phpCAS] for details and installation instructions.
 
-== Modifications to RoundCube ==
-Currently the CAS Authentication plugin makes use of two RoundCube plugin API hooks that are not implemented or implemented differently from those found in the RoundCube repository. Eventually these hooks may be implemented and no modifications to RoundCube will be needed. But for now the following changes to the RoundCube code are needed for the plugin.
-* logout_after plugin hook:
-* imap_connect plugin hook: 
+== Modifications to !RoundCube ==
+Currently the CAS Authentication plugin makes use of two !RoundCube plugin API hooks that are not implemented or implemented differently from those found in the !RoundCube repository. Eventually these hooks may be implemented and no modifications to !RoundCube will be needed. But for now the following changes to the !RoundCube code are needed for the plugin.
+  * logout_after plugin hook:
+  * imap_connect plugin hook: 
