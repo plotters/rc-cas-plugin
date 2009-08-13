@@ -5,7 +5,7 @@ See [http://trac.roundcube.net/wiki/Doc_Plugins#InstallingandactivatingPlugins] 
 
 
 = Configuration =
-The config.inc.php.dist file contains the configuration settings for the plugin. These settings need to be changed to match those of your CAS server and IMAP backend.
+The config.inc.php.dist file contains the configuration settings for the plugin. These settings need to be changed to match those of your CAS server and IMAP backend. This file needs to be renamed config.inc.php after the necessary changes are made.
 
 == These changes are necessary ==
   * cas_proxy: specifies whether !RoundCube is acting as a CAS proxy for the IMAP backend. If set to true, cas_imap_name must also be specified. If set to false, cas_imap_password must also be specified.
