@@ -5,5 +5,5 @@
 
 == Modifications to !RoundCube ==
 Currently the CAS Authentication plugin makes use of two !RoundCube plugin API hooks that are not implemented or implemented differently from those found in the !RoundCube repository. Eventually these hooks may be implemented and no modifications to !RoundCube will be needed. But for now the following changes to the !RoundCube code are needed for the plugin.
-  * logout_after plugin hook:
-  * imap_connect plugin hook: 
+  * logout_after plugin hook: [http://code.google.com/p/rc-cas-plugin/source/browse/trunk/index_logout_after_hook.diff index_logout_after_hook.diff]
+  * imap_connect plugin hook: [http://code.google.com/p/rc-cas-plugin/source/browse/trunk/rcube_imap_imap_connect_hook.diff rcube_imap_imap_connect_hook.diff]
