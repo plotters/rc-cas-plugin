@@ -1,0 +1,20 @@
+#summary Guide for Installing and Configuring the CAS Authentication plugin
+
+= Installation =
+See [http://trac.roundcube.net/wiki/Doc_Plugins#InstallingandactivatingPlugins] for instructions on installing !RoundCube plugins.
+
+
+= Configuration =
+The config.inc.php.dist file contains the configuration settings for the plugin. These settings need to be changed to match those of your CAS server and IMAP backend.
+
+== These changes are necessary ==
+  * cas_proxy: specifies whether !RoundCube is acting as a CAS proxy for the IMAP backend. If set to true, cas_imap_name must also be specified. If set to false, cas_imap_password must also be specified.
+  * cas_hostname: specifies the host name of the CAS server, e.g. www.my-cas-server.com.
+  * cas_validation: specifies SSL validation of the CAS server. If set to "ca" or "self", cas_cert must also be specified.
+
+== These changes are optional ==
+  * cas_imap_caching: specifies whether the IMAP backend caches authentication credentials. This setting should accurately reflect how the IMAP backend is configured for optimal performance.
+  * cas_port: this is typically 443.
+  * cas_uri
+  * cas_login_url
+  * cas_logout_url
