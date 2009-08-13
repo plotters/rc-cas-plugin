@@ -7,44 +7,50 @@
  * authenticated by the CAS server and acts as a CAS proxy to relay authenticated
  * credentials to the IMAP backend.
  *
- * @version 0.4.1
+ * @version 0.4.2
  * @author Alex Li (li@hcs.harvard.edu)
  * 
  */
 
 class cas_authentication extends rcube_plugin {
-
+    // fields
+    private $cas_inited;
+    
     /**
      * Initialize plugin
      *
      */
     function init() {
+        // initialize plugin fields
+        $cas_inited = false;
+        
         // load plugin configurations
         $this->load_config();
         
         // add application hooks
         $this->add_hook('startup', array($this, 'startup'));
         $this->add_hook('render_page', array($this, 'render_page'));
+        $this->add_hook('authenticate', array($this, 'authenticate'));
+        $this->add_hook('login_after', array($this, 'login_after'));
+        $this->add_hook('login_failed', array($this, 'login_failed'));
+        $this->add_hook('logout_after', array($this, 'logout_after'));
         $this->add_hook('imap_connect', array($this, 'imap_connect'));
     }
 
     /**
-     * Intercept startup actions
+     * Handle plugin-specific actions
+     * These actions are handled at the startup hook rather than registered as
+     * custom actions because the user session does not necessarily exist when
+     * these actions need to be handled.
      *
      * @param array $args arguments from rcmail
      * @return array modified arguments
      */
     function startup($args) {
-        // retrieve rcmail instance
-        $rcmail = rcmail::get_instance();
-        
-        // retrieve configurations
-        $cfg = $rcmail->config->all();
-
         // intercept PGT callback action
         if ($args['action'] == 'pgtcallback') {
             // initialize CAS client
-            $this->init_cas();
+            $this->cas_init();
             
             // retrieve and store PGT if present
             phpCAS::forceAuthentication();
@@ -53,82 +59,23 @@ class cas_authentication extends rcube_plugin {
             exit;
         }
         
-        // intercept login action
-        else if ($args['action'] == 'login') {
-            // kill current session
-            $rcmail->kill_session();
-            
+        // intercept CAS logout action
+        else if ($args['action'] == 'caslogout') {
             // initialize CAS client
-            $this->init_cas();
-
-            // attempt to authenticate with CAS server
-            if (phpCAS::forceAuthentication()) {
-                // retrieve authenticated credentials
-                $host = $rcmail->autoselect_host();
-                $user = phpCAS::getUser();
-                if ($cfg['cas_proxy']) {
-                    $password = phpCAS::retrievePT($cfg['cas_imap_name'], $err_code, $output);
-                }
-                else {
-                    $password = $cfg['cas_imap_password'];
-                }
-
-                // restore original request parameters
-                $query = array();
-                if ($url = $_COOKIE['cas_url']) {
-                    parse_str($url, $query);
-                }
-
-                // attempt to login
-                if ($_SESSION['temp'] && !empty($host) && !empty($user) && isset($password)
-                && $rcmail->login($user, $password, $host)) {
-                    // create new session ID
-                    rcube_sess_unset('temp');
-                    rcube_sess_regenerate_id();
-
-                    // send auth cookie if necessary
-                    $rcmail->authenticate_session();
-
-                    // allow plugins to control redirection url, default to original request url
-                    $redirect_url = $rcmail->plugins->exec_hook('login_after', $query);
-                    unset($redirect_url['abort']);
-
-                    // redirect
-                    $rcmail->output->redirect($redirect_url);
-                }
-                
-                // login failed
-                else {
-                    // handle IMAP connection failure
-                    $this->imap_failure();
-                }
-            }
-        }
-
-        // intercept logout task
-        else if ($args['task'] == 'logout') {
-            // still logged into RoundCube
-            if (isset($_SESSION['user_id'])) {
-                // perform RoundCube logout routines
-                $rcmail->logout_actions();
-                $rcmail->kill_session();
-            }
-
-            // initialize CAS client
-            $this->init_cas();
+            $this->cas_init();
 
             // logout from CAS server
             phpCAS::logout();
-            
+
             // end script
             exit;
         }
 
         return $args;
     }
-
+    
     /**
-     * Intercept page rendering actions
+     * Intercept page rendering
      *
      * @param array $args arguments from rcmail
      * @return array modified arguments
@@ -146,52 +93,35 @@ class cas_authentication extends rcube_plugin {
             }
             setcookie('cas_url', $url);
 
-            // set redirection url
-            $rcmail->action = 'login';
-            $redirect_url = array('action' => $rcmail->action);
-
             // redirect to login action
-            $rcmail->output->redirect($redirect_url);
+            $rcmail->output->redirect(array('action' => 'login', 'task' => 'mail'));
         }
         
         return $args;
     }
-    
+
     /**
-     * Intercept connection to IMAP server using stored session data
+     * Inject authentication credentials
      *
      * @param array $args arguments from rcmail
      * @return array modified arguments
      */
-    function imap_connect($args) {
-        // IMAP connection is not established
-        if (!$args['connected']) {
-            // retrieve rcmail instance
-            $rcmail = rcmail::get_instance();
+    function authenticate($args) {
+        // retrieve configurations
+        $cfg = rcmail::get_instance()->config->all();
+        
+        // initialize CAS client
+        $this->cas_init();
 
-            // retrieve configurations
-            $cfg = $rcmail->config->all();
-
-            // RoundCube is acting as CAS proxy
+        // attempt to authenticate with CAS server
+        if (phpCAS::forceAuthentication()) {
+            // retrieve authenticated credentials
+            $args['user'] = phpCAS::getUser();
             if ($cfg['cas_proxy']) {
-                // the IMAP server caches proxy tickets
-                if ($cfg['cas_imap_caching']) {
-                    // attempt to connect to IMAP server
-                    if ($rcmail->imap->connect($_SESSION['imap_host'], $_SESSION['username'], $rcmail->decrypt($_SESSION['password']), $_SESSION['imap_port'], $_SESSION['imap_ssl'])) {
-                        // connection is successful, so no need to retrieve new proxy ticket
-                        $args['connected'] = true;
-                        return $args;
-                    }
-                }
-
-                // the IMAP server doesn't cache proxy tickets or the cache has expired
-                // initialize CAS client
-                $this->init_cas();
-
-                // retrieve and store a new proxy ticket in session
-                if (phpCAS::forceAuthentication()) {
-                    $_SESSION['password']  = $rcmail->encrypt(phpCAS::retrievePT($cfg['cas_imap_name'], $err_code, $output));
-                }
+                $args['pass'] = '';
+            }
+            else {
+                $args['pass'] = $cfg['cas_imap_password'];
             }
         }
         
@@ -199,51 +129,29 @@ class cas_authentication extends rcube_plugin {
     }
     
     /**
-     * Initialize CAS client
-     * 
-     */
-    private function init_cas() {
-        // retrieve configurations
-        $cfg = rcmail::get_instance()->config->all();
-
-        // include phpCAS
-        require_once('CAS.php');
-        
-        // initialize CAS client
-        if ($cfg['cas_proxy']) {
-            phpCAS::proxy(CAS_VERSION_2_0, $cfg['cas_hostname'], $cfg['cas_port'], $cfg['cas_uri'], false);
-            
-            // set URL for PGT callback
-            phpCAS::setFixedCallbackURL($this->generate_url(array('action' => 'pgtcallback')));
-        }
-        else {
-            phpCAS::client(CAS_VERSION_2_0, $cfg['cas_hostname'], $cfg['cas_port'], $cfg['cas_uri'], false);
-        }
-        
-        // set service URL for authorization with CAS server
-        phpCAS::setFixedServiceURL($this->generate_url(array('action' => 'login')));
-
-        // set SSL validation for the CAS server
-        if ($cfg['cas_validation'] == 'self') {
-            phpCAS::setCasServerCert($cfg['cas_cert']);
-        }
-        else if ($cfg['cas_validation'] == 'ca') {
-            phpCAS::setCasServerCACert($cfg['cas_cert']);
-        }
-        else {
-            phpCAS::setNoCasServerValidation();
-        }
-        
-        // set login and logout URLs of the CAS server
-        phpCAS::setServerLoginURL($cfg['cas_login_url']);
-        phpCAS::setServerLogoutURL($cfg['cas_logout_url']);
-    }
-
-    /**
-     * Handle IMAP connection failures
+     * Inject post-login redirection url
      *
+     * @param array $args arguments from rcmail
+     * @return array modified arguments
      */
-    private function imap_failure() {
+    function login_after($args) {
+        // restore original request parameters
+        $query = array();
+        if ($url = $_COOKIE['cas_url']) {
+            parse_str($url, $query);
+            $args = $query;
+        }
+        
+        return $args;
+    }
+    
+    /**
+     * Intercept login failure
+     *
+     * @param array $args arguments from rcmail
+     * @return array modified arguments
+     */
+    function login_failed($args) {
         // retrieve rcmail instance
         $rcmail = rcmail::get_instance();
         
@@ -260,7 +168,7 @@ EOF;
 <h3 class="error-title">$__error_title</h3>
 <p class="error-text">$__error_text</p>
 <form name="form" action="./" method="get">
-<input type="hidden" name="_task" value="logout" />
+<input type="hidden" name="_action" value="caslogout" />
 <p style="text-align:center;"><input type="submit" class="button mainaction" value="Logout" /></p>
 </form>
 </div>
@@ -275,6 +183,107 @@ EOF;
         
         // end script
         exit;
+    }
+    
+    /**
+     * Perform post-logout actions
+     *
+     * @param array $args arguments from rcmail
+     * @return array modified arguments
+     */
+    function logout_after($args) {
+        // retrieve rcmail instance
+        $rcmail = rcmail::get_instance();
+
+        // kill current session
+        $rcmail->kill_session();
+
+        // redirect to CAS logout action
+        $rcmail->output->redirect(array('action' => 'caslogout'));
+    }
+    
+    /**
+     * Inject IMAP authentication credentials
+     *
+     * @param array $args arguments from rcmail
+     * @return array modified arguments
+     */
+    function imap_connect($args) {
+        // retrieve configurations
+        $cfg = rcmail::get_instance()->config->all();
+        
+        // RoundCube is acting as CAS proxy
+        if ($cfg['cas_proxy']) {
+            // a proxy ticket has been retrieved, the IMAP server caches proxy tickets, and this is the first connection attempt
+            if ($_SESSION['cas_pt'] && $cfg['cas_imap_caching'] && $args['attempt'] == 1) {
+                // use existing proxy ticket in session
+                $args['pass'] = $_SESSION['cas_pt'];
+            }
+
+            // no proxy tickets have been retrieved, the IMAP server doesn't cache proxy tickets, or the first connection attempt has failed
+            else {
+                // initialize CAS client
+                $this->cas_init();
+
+                // retrieve a new proxy ticket and store it in session
+                if (phpCAS::forceAuthentication()) {
+                    $_SESSION['cas_pt'] = phpCAS::retrievePT($cfg['cas_imap_name'], $err_code, $output);
+                    $args['pass'] = $_SESSION['cas_pt'];
+                }
+            }
+            
+            // enable retry on the first connection attempt only
+            if ($args['attempt'] <= 1) {
+                $args['retry'] = true;
+            }
+        }
+        
+        return $args;
+    }
+    
+    /**
+     * Initialize CAS client
+     * 
+     */
+    private function cas_init() {
+        if (!$this->cas_inited) {
+            // retrieve configurations
+            $cfg = rcmail::get_instance()->config->all();
+
+            // include phpCAS
+            require_once('CAS.php');
+            
+            // initialize CAS client
+            if ($cfg['cas_proxy']) {
+                phpCAS::proxy(CAS_VERSION_2_0, $cfg['cas_hostname'], $cfg['cas_port'], $cfg['cas_uri'], false);
+
+                // set URL for PGT callback
+                phpCAS::setFixedCallbackURL($this->generate_url(array('action' => 'pgtcallback')));
+            }
+            else {
+                phpCAS::client(CAS_VERSION_2_0, $cfg['cas_hostname'], $cfg['cas_port'], $cfg['cas_uri'], false);
+            }
+
+            // set service URL for authorization with CAS server
+            phpCAS::setFixedServiceURL($this->generate_url(array('action' => 'login', 'task' => 'mail')));
+
+            // set SSL validation for the CAS server
+            if ($cfg['cas_validation'] == 'self') {
+                phpCAS::setCasServerCert($cfg['cas_cert']);
+            }
+            else if ($cfg['cas_validation'] == 'ca') {
+                phpCAS::setCasServerCACert($cfg['cas_cert']);
+            }
+            else {
+                phpCAS::setNoCasServerValidation();
+            }
+
+            // set login and logout URLs of the CAS server
+            phpCAS::setServerLoginURL($cfg['cas_login_url']);
+            phpCAS::setServerLogoutURL($cfg['cas_logout_url']);
+
+            $this->cas_inited = true;
+        }
     }
     
     /**
