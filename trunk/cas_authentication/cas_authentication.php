@@ -195,9 +195,6 @@ EOF;
         // retrieve rcmail instance
         $rcmail = rcmail::get_instance();
 
-        // kill current session
-        $rcmail->kill_session();
-
         // redirect to CAS logout action
         $rcmail->output->redirect(array('action' => 'caslogout'));
     }
