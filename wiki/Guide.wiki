@@ -1,5 +1,9 @@
 #summary Guide for installing and configuring the CAS Authentication plugin
 
+== Requirements ==
+  * phpCAS 1.0.1+: visit [http://www.ja-sig.org/wiki/display/CASC/phpCAS] for details and installation instructions.
+
+
 = Installation =
 See [http://trac.roundcube.net/wiki/Doc_Plugins#InstallingandactivatingPlugins] for instructions on installing !RoundCube plugins.
 
