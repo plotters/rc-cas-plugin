@@ -1,6 +1,6 @@
 #summary Guide for installing and configuring the CAS Authentication plugin
 
-== Requirements ==
+= Requirements =
   * phpCAS 1.0.1+: visit [http://www.ja-sig.org/wiki/display/CASC/phpCAS] for details and installation instructions.
 
 
