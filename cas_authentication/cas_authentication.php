@@ -212,9 +212,9 @@ EOF;
         // RoundCube is acting as CAS proxy
         if ($cfg['cas_proxy']) {
             // a proxy ticket has been retrieved, the IMAP server caches proxy tickets, and this is the first connection attempt
-            if ($_SESSION['cas_pt'] && $cfg['cas_imap_caching'] && $args['attempt'] == 1) {
+            if ($_SESSION['cas_pt'][php_uname('n')] && $cfg['cas_imap_caching'] && $args['attempt'] == 1) {
                 // use existing proxy ticket in session
-                $args['pass'] = $_SESSION['cas_pt'];
+                $args['pass'] = $_SESSION['cas_pt'][php_uname('n')];
             }
 
             // no proxy tickets have been retrieved, the IMAP server doesn't cache proxy tickets, or the first connection attempt has failed
@@ -224,8 +224,8 @@ EOF;
 
                 // retrieve a new proxy ticket and store it in session
                 if (phpCAS::forceAuthentication()) {
-                    $_SESSION['cas_pt'] = phpCAS::retrievePT($cfg['cas_imap_name'], $err_code, $output);
-                    $args['pass'] = $_SESSION['cas_pt'];
+                    $_SESSION['cas_pt'][php_uname('n')] = phpCAS::retrievePT($cfg['cas_imap_name'], $err_code, $output);
+                    $args['pass'] = $_SESSION['cas_pt'][php_uname('n')];
                 }
             }
             
@@ -256,6 +256,9 @@ EOF;
 
                 // set URL for PGT callback
                 phpCAS::setFixedCallbackURL($this->generate_url(array('action' => 'pgtcallback')));
+                
+                // set PGT storage
+                phpCAS::setPGTStorageFile('xml', $cfg['cas_pgt_dir']);
             }
             else {
                 phpCAS::client(CAS_VERSION_2_0, $cfg['cas_hostname'], $cfg['cas_port'], $cfg['cas_uri'], false);
