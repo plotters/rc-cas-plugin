@@ -12,6 +12,10 @@
 //     If set to false, the IMAP password specified below will be used.
 $rcmail_config['cas_proxy'] = true;
 
+// directory where PGTs will be temporarily stored. Will only be used if
+//     cas_proxy is set to true.
+$rcmail_config['cas_pgt_dir'] = '/tmp';
+
 // name of the IMAP service. Will only be used if cas_proxy is set to true.
 //     This service name must be authorized to be used with the CAS server.
 $rcmail_config['cas_imap_name'] = 'name_of_imap_service';
